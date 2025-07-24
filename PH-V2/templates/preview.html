@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Data - ACD PAYMENT HISTORY{% endblock %}
+
+{% block extra_head %}
+<style>
+.editable-cell {
+    background-color: #fff3cd;
+    cursor: pointer;
+    border: 1px dashed #856404;
+}
+.editable-cell:hover {
+    background-color: #ffeeba;
+}
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.table {
+    border-collapse: collapse;
+    width: 100%;
+}
+.table td, .table th {
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    vertical-align: middle;
+}
+.sticky-header th {
+    position: sticky;
+    top: 0;
+    background-color: #212529 !important;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+}
+.passbook-input {
+    border: 2px solid #ffc107 !important;
+    background-color: #fff3cd !important;
+}
+.passbook-input:focus {
+    border-color: #ff8800 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
+}
+.variance-cell {
+    background-color: #e3f2fd !important;
+    font-weight: bold;
+    color: #1976d2;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-eye me-2"></i>Data Preview</h2>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-link me-1"></i>Source: <a href="{{ url }}" target="_blank" class="text-decoration-none">{{ url }}</a>
+                </p>
+                <small class="text-muted">Found {{ total_records }} records</small>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary me-2" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </button>
+                <a href="{{ url_for('download_excel', session_id=session_id) }}" class="btn btn-success">
+                    <i class="fas fa-download me-2"></i>Download Excel
+                </a>
+            </div>
+        </div>
+
+        {% if data %}
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>Payment Data
+                    <small class="ms-2">({{ total_records }} records)</small>
+                </h5>
+                <small>Enter PassBook values in yellow fields - Variance will be calculated automatically (Principal + Pen - PassBook)</small>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addRowModal">
+                        <i class="fas fa-plus me-2"></i>Add New Row
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="dataTable">
+                        <thead class="table-dark sticky-header">
+                            <tr>
+                                <th scope="col" style="min-width: 50px;">#</th>
+                                {% for column in ['Receipt No', 'Date', 'Principal', 'Pen', 'Principal_PassBook', 'Principal_Variance', 'CBU', 'CBU_PassBook', 'CBU_Variance', 'CBU withdraw', 'CBU_withdraw_PassBook', 'CBU_withdraw_Variance', 'Collector'] %}
+                                    {% if column in columns %}
+                                        <th scope="col" style="width: auto; white-space: nowrap; padding: 8px;">{{ column.replace('_', ' ') }}</th>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                {% for column in ['Receipt No', 'Date', 'Principal', 'Pen', 'Principal_PassBook', 'Principal_Variance', 'CBU', 'CBU_PassBook', 'CBU_Variance', 'CBU withdraw', 'CBU_withdraw_PassBook', 'CBU_withdraw_Variance', 'Collector'] %}
+                                    {% if column in columns %}
+                                        <td {% if column.endswith('_PassBook') %}
+                                            class="editable-passbook" 
+                                            style="width: auto; padding: 4px;"
+                                            {% elif column.endswith('_Variance') %}
+                                            class="variance-cell" 
+                                            style="width: auto; background-color: #e3f2fd; font-weight: bold; padding: 4px;"
+                                            {% else %}
+                                            style="width: auto; padding: 4px;"
+                                            {% endif %}>
+                                            {% if column.endswith('_PassBook') %}
+                                                <input type="number" 
+                                                       step="0.01" 
+                                                       class="form-control form-control-sm passbook-input" 
+                                                       value="{{ row.get(column, '0') }}" 
+                                                       data-row-id="{{ row.get('_row_id', loop.index0) }}" 
+                                                       data-column="{{ column }}"
+                                                       style="border: 1px solid #ffc107; background-color: #fff3cd;">
+                                            {% elif column.endswith('_Variance') %}
+                                                <span class="variance-value" data-row-id="{{ row.get('_row_id', loop.index0) }}" data-column="{{ column }}">
+                                                    {{ row.get(column, '0') }}
+                                                </span>
+                                            {% else %}
+                                                {{ row.get(column, '') }}
+                                            {% endif %}
+                                        </td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('download_excel', session_id=session_id) }}" class="btn btn-success btn-lg">
+                <i class="fas fa-file-excel me-2"></i>Download Excel File
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            No data found to preview
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Row Modal -->
+<div class="modal fade" id="addRowModal" tabindex="-1" aria-labelledby="addRowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRowModalLabel">Add New Payment Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRowForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="newDate" class="form-label">Date *</label>
+                            <input type="date" class="form-control" id="newDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="newReceiptNo" class="form-label">Receipt No</label>
+                            <input type="text" class="form-control" id="newReceiptNo">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="newPrincipal" class="form-label">Principal</label>
+                            <input type="number" step="0.01" class="form-control" id="newPrincipal" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="newPen" class="form-label">Pen</label>
+                            <input type="number" step="0.01" class="form-control" id="newPen" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="newCollector" class="form-label">Collector</label>
+                            <input type="text" class="form-control" id="newCollector">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="newCBU" class="form-label">CBU</label>
+                            <input type="number" step="0.01" class="form-control" id="newCBU" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="newCBUWithdraw" class="form-label">CBU withdraw</label>
+                            <input type="number" step="0.01" class="form-control" id="newCBUWithdraw" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveNewRow">Add Row</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Simple function to calculate variance for a specific row
+function calculateVarianceForRow(rowElement, rowIndex) {
+    const cells = rowElement.querySelectorAll('td');
+    
+    // Get all the values from the row
+    let principal = 0, pen = 0, cbu = 0, cbuWithdraw = 0;
+    let principalPassbook = 0, cbuPassbook = 0, cbuWithdrawPassbook = 0;
+    
+    // Find values by checking each cell
+    cells.forEach((cell, index) => {
+        const text = cell.textContent.trim();
+        const input = cell.querySelector('input');
+        const span = cell.querySelector('span');
+        
+        // Get the header for this column
+        const header = document.querySelector(`#dataTable thead th:nth-child(${index + 1})`);
+        if (!header) return;
+        
+        const headerText = header.textContent.trim();
+        
+        if (headerText === 'Principal') {
+            principal = parseFloat(text) || 0;
+        } else if (headerText === 'Pen') {
+            pen = parseFloat(text) || 0;
+        } else if (headerText === 'CBU') {
+            cbu = parseFloat(text) || 0;
+        } else if (headerText === 'CBU withdraw') {
+            cbuWithdraw = parseFloat(text) || 0;
+        } else if (headerText === 'Principal PassBook' && input) {
+            principalPassbook = parseFloat(input.value) || 0;
+        } else if (headerText === 'CBU PassBook' && input) {
+            cbuPassbook = parseFloat(input.value) || 0;
+        } else if (headerText === 'CBU withdraw PassBook' && input) {
+            cbuWithdrawPassbook = parseFloat(input.value) || 0;
+        }
+    });
+    
+    // Calculate and update variances
+    cells.forEach((cell, index) => {
+        const span = cell.querySelector('span');
+        if (!span) return;
+        
+        const header = document.querySelector(`#dataTable thead th:nth-child(${index + 1})`);
+        if (!header) return;
+        
+        const headerText = header.textContent.trim();
+        
+        if (headerText === 'Principal Variance') {
+            const variance = (principal + pen) - principalPassbook;
+            span.textContent = variance.toFixed(2);
+        } else if (headerText === 'CBU Variance') {
+            const variance = cbu - cbuPassbook;
+            span.textContent = variance.toFixed(2);
+        } else if (headerText === 'CBU withdraw Variance') {
+            const variance = cbuWithdraw - cbuWithdrawPassbook;
+            span.textContent = variance.toFixed(2);
+        }
+    });
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate initial variances for all rows
+    const rows = document.querySelectorAll('#dataTable tbody tr');
+    rows.forEach((row, index) => {
+        calculateVarianceForRow(row, index);
+    });
+    
+    // Add event listeners to all PassBook inputs
+    document.querySelectorAll('.passbook-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const row = this.closest('tr');
+            const rowId = this.dataset.rowId;
+            
+            // Recalculate variance for this row
+            calculateVarianceForRow(row, 0); // rowIndex not needed anymore
+            
+            // Send update to server using row ID instead of index
+            const updateData = {};
+            updateData[rowId] = {};
+            updateData[rowId][this.dataset.column] = this.value;
+            
+            // Also send all calculated variances for this row
+            const varianceSpans = row.querySelectorAll('span[data-column*="_Variance"]');
+            varianceSpans.forEach(span => {
+                updateData[rowId][span.dataset.column] = span.textContent;
+            });
+            
+            fetch(`/update_data/{{ session_id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            })
+            .catch(error => {
+                console.error('Error updating data:', error);
+            });
+        });
+    });
+    
+    // Handle adding new row
+    document.getElementById('saveNewRow').addEventListener('click', function() {
+        const form = document.getElementById('addRowForm');
+        const formData = new FormData(form);
+        
+        const newDate = document.getElementById('newDate').value;
+        if (!newDate) {
+            alert('Please enter a date');
+            return;
+        }
+        
+        // Create new row data
+        const newRowData = {
+            'Date': newDate,
+            'Receipt No': document.getElementById('newReceiptNo').value,
+            'Principal': document.getElementById('newPrincipal').value || '0',
+            'Pen': document.getElementById('newPen').value || '0',
+            'CBU': document.getElementById('newCBU').value || '0',
+            'CBU withdraw': document.getElementById('newCBUWithdraw').value || '0',
+            'Collector': document.getElementById('newCollector').value,
+            'Principal_PassBook': '0',
+            'Principal_Variance': '0',
+            'CBU_PassBook': '0',
+            'CBU_Variance': '0',
+            'CBU_withdraw_PassBook': '0',
+            'CBU_withdraw_Variance': '0'
+        };
+        
+        // Send to server to add and sort
+        fetch(`/add_row/{{ session_id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newRowData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show updated data
+                location.reload();
+            } else {
+                alert('Error adding row: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding row');
+        });
+        
+        // Close modal and reset form
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addRowModal'));
+        modal.hide();
+        document.getElementById('addRowForm').reset();
+    });
+});
+</script>
+{% endblock %}
